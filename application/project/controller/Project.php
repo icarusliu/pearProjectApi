@@ -145,6 +145,26 @@ class Project extends BasicApi
     }
 
     /**
+     * 统计项目相关情况
+     *
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function stat()
+    {
+        $list = $this->model->list();
+        $countByMonth = $this->model->newProjectCountLastTwelveMonths();
+        $topByPerson = $this->model->topCountByPerson();
+        $this->success('', [
+            'count'=>$this->model->count(),
+            'list'=>$list,
+            'countByMonth'=>$countByMonth,
+            'topByPerson'=>$topByPerson
+        ]);
+    }
+
+    /**
      * 新增
      *
      * @param Request $request

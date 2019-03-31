@@ -19,6 +19,95 @@ class Task extends CommonModel
 {
     protected $append = ['priText', 'liked', 'stared', 'tags', 'childCount', 'hasUnDone', 'parentDone', 'hasComment', 'hasSource', 'canRead'];
 
+    /**
+     * 获取未完成与完成的任务数
+     */
+    public function taskCount()
+    {
+        $prefix = config('database.prefix');
+        $sql = "select sum(case when done = 0 then 1 else 0 end) as unDoneCount, 
+                  sum(case when done = 1 then 1 else 0 end) as doneCount from ${prefix}task 
+                where deleted = 0";
+        $list = Db::query($sql);
+        if ($list && 0 != count($list)) {
+            return $list[0];
+        }
+
+        return [
+            'unDoneCount'=>0,
+            'doneCount'=>0
+        ];
+    }
+
+    /**
+     * 获取当天新增的任务数
+     * @return mixed
+     */
+    public function todayTaskCount()
+    {
+        $nowDate = date('Y-m-d');
+        $nowTime = nowTime();
+        $prefix = config('database.prefix');
+        $sql = "select count(1) as c from ${prefix}task
+                where deleted = 0 
+                  and create_time between '${nowDate}' and '${nowTime}'";
+        return Db::query($sql);
+    }
+
+    /**
+     * 统计逾期任务数目（未完成的、未删除的）
+     *
+     * @return int
+     */
+    public function overdueCount()
+    {
+        $nowTime = nowTime();
+
+        $prefix = config('database.prefix');
+        $sql = "select count(1) as c from ${prefix}task  
+                where deleted = 0  
+                  and done = 0 
+                  and end_time < '${nowTime}'";
+        $list = Db::query($sql);
+        if ($list && 0 != count($list)) {
+            return $list[0]['c'];
+        }
+
+        return 0;
+    }
+
+    /**
+     * 最近一月每天新增任务数
+     */
+    public function newTaskCountPerDayLastMonth()
+    {
+        $startDate = date_create();
+        date_sub($startDate, date_interval_create_from_date_string("31 days"));
+        $startDateStr = date_format($startDate, "Y-m-d");
+        $prefix = config('database.prefix');
+        $sql = "select month(create_time) as month, day(create_time) as day, count(1) as c 
+                from ${prefix}task t 
+                where t.deleted = 0 
+                  and t.create_time >= '${startDateStr}'
+                group by month(create_time), day(create_time)
+                order by create_time";
+        return Db::query($sql);
+    }
+
+    /**
+     * 按优先级统计任务数
+     * @return mixed
+     */
+    public function countByPriority()
+    {
+        $prefix = config('database.prefix');
+        $sql = "select case when pri = 0 then '普通' when pri = 1 then '紧急' else '非常紧急' end as priority, count(1) as c 
+                from ${prefix}task t 
+                where t.deleted = 0
+                group by case when pri = 0 then '普通' when pri = 1 then '紧急' else '非常紧急' end ";
+        return Db::query($sql);
+    }
+
     public function read($code)
     {
         if (!$code) {

@@ -43,6 +43,90 @@ class Project extends CommonModel
     }
 
     /**
+     * 查询项目清单
+     *
+     * @return mixed
+     */
+    public function list()
+    {
+        $prefix = config('database.prefix');
+        $memberCode = getCurrentMember()['code'];
+        $sql = "select p.code, p.name from {$prefix}project as p 
+                  left join {$prefix}project_member pm 
+                    on p.code = pm.project_code 
+                where p.deleted = 0
+                  and pm.member_code = '{$memberCode}'";
+        return Db::query($sql);
+    }
+
+    /**
+     * 获取所有未删除的项目总数
+     *
+     * @return float|int|string
+     */
+    public function count()
+    {
+        $prefix = config('database.prefix');
+        $sql = "select count(1) as c from {$prefix}project 
+                where deleted = 0";
+        $list = Db::query($sql);
+        if ($list && 0 != count($list)) {
+            return $list[0]['c'];
+        }
+
+        return 0;
+    }
+
+    /**
+     * 最近12年月每月新增的项目数
+     * @return mixed
+     */
+    public function newProjectCountLastTwelveMonths()
+    {
+        $startDate = date_create();
+        date_sub($startDate, date_interval_create_from_date_string("13 months"));
+        $startDateStr = date_format($startDate, "Y-m-d");
+
+        $prefix = $this->getPrefix();
+        $sql = "select year(create_time) as year, 
+                        month(create_time) as month, 
+                        count(1) as c
+                        from ${prefix}project as p
+                        where p.deleted = 0
+                          and p.create_time >= '${startDateStr}'
+                        group by year(create_time), month(create_time) 
+                        order by year(create_time) asc, month(create_time) asc
+                        limit 12";
+        return Db::query($sql);
+    }
+
+    /**
+     * 获取数据库表前缀
+     * @return mixed
+     */
+    private function getPrefix()
+    {
+        return config('database.prefix');
+    }
+
+    /**
+     *  获取用户项目数目排行，取前7个
+     */
+    public function topCountByPerson()
+    {
+        $prefix = $this->getPrefix();
+        $sql = "select m.name as name, count(1) as c
+                from ${prefix}member m 
+                left join ${prefix}project_member pm 
+                on pm.member_code = m.code 
+                group by m.name
+                order by count(1) desc
+                limit 7";
+        $list = Db::query($sql);
+        return $list;
+    }
+
+    /**
      * 创建项目
      * @param $memberCode
      * @param $orgCode

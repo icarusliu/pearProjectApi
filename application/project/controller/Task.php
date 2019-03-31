@@ -64,6 +64,29 @@ class Task extends BasicApi
     }
 
     /**
+     * 获取任务数统计信息
+     */
+    public function taskStatInfos()
+    {
+        $taskStatList = $this->model->newTaskCountPerDayLastMonth();
+        $taskCount = $this->model->taskCount();
+        $todayTaskCountList = $this->model->todayTaskCount();
+        $todayTaskCount = 0 == count($todayTaskCountList) ? 0 : $todayTaskCountList[0]['c'];
+        $countByPriority = $this->model->countByPriority();
+
+        $result = [
+           'taskStatList' => $taskStatList,
+           'taskCount' => $taskCount['unDoneCount'],
+            'doneCount' => $taskCount['doneCount'],
+           'todayTaskCount' => $todayTaskCount,
+            'overdueCount' => $this->model->overdueCount(),
+            'countByPriority' => $countByPriority
+        ];
+
+        $this->success('', $result);
+    }
+
+    /**
      * 获取自己的任务
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
@@ -91,6 +114,14 @@ class Task extends BasicApi
             }
         }
         $this->success('', $list);
+    }
+
+    /**
+     * 获取逾期任务数目
+     */
+    public function overdueCount()
+    {
+        $this->success('', $this->model->overdueCount());
     }
 
     public function taskSources()
