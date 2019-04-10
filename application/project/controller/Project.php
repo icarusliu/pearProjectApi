@@ -153,11 +153,12 @@ class Project extends BasicApi
      */
     public function stat()
     {
-        $list = $this->model->list();
-        $countByMonth = $this->model->newProjectCountLastTwelveMonths();
+        $memberCode = getCurrentMember()['code'];
+        $list = $this->model->list($memberCode);
+        $countByMonth = $this->model->newProjectCountLastTwelveMonths($memberCode);
         $topByPerson = $this->model->topCountByPerson();
         $this->success('', [
-            'count'=>$this->model->count(),
+            'count'=>$this->model->count($memberCode),
             'list'=>$list,
             'countByMonth'=>$countByMonth,
             'topByPerson'=>$topByPerson

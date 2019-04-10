@@ -45,12 +45,12 @@ class Project extends CommonModel
     /**
      * 查询项目清单
      *
+     * @param $memberCode
      * @return mixed
      */
-    public function list()
+    public function list($memberCode)
     {
         $prefix = config('database.prefix');
-        $memberCode = getCurrentMember()['code'];
         $sql = "select p.code, p.name from {$prefix}project as p 
                   left join {$prefix}project_member pm 
                     on p.code = pm.project_code 
@@ -62,13 +62,17 @@ class Project extends CommonModel
     /**
      * 获取所有未删除的项目总数
      *
+     * @param $memberCode
      * @return float|int|string
      */
-    public function count()
+    public function count($memberCode)
     {
         $prefix = config('database.prefix');
-        $sql = "select count(1) as c from {$prefix}project 
-                where deleted = 0";
+        $sql = "select count(1) as c from {$prefix}project as p 
+                  left join {$prefix}project_member pm 
+                    on p.code = pm.project_code 
+                where p.deleted = 0
+                  and pm.member_code = '{$memberCode}'";
         $list = Db::query($sql);
         if ($list && 0 != count($list)) {
             return $list[0]['c'];
@@ -79,9 +83,10 @@ class Project extends CommonModel
 
     /**
      * 最近12年月每月新增的项目数
+     * @param $memberCode
      * @return mixed
      */
-    public function newProjectCountLastTwelveMonths()
+    public function newProjectCountLastTwelveMonths($memberCode)
     {
         $startDate = date_create();
         date_sub($startDate, date_interval_create_from_date_string("13 months"));
@@ -91,9 +96,12 @@ class Project extends CommonModel
         $sql = "select year(create_time) as year, 
                         month(create_time) as month, 
                         count(1) as c
-                        from ${prefix}project as p
+                        from ${prefix}project as p 
+                        left join {$prefix}project_member pm 
+                        on p.code = pm.project_code 
                         where p.deleted = 0
                           and p.create_time >= '${startDateStr}'
+                          and pm.member_code = '{$memberCode}'
                         group by year(create_time), month(create_time) 
                         order by year(create_time) asc, month(create_time) asc
                         limit 12";

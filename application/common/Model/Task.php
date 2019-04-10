@@ -21,13 +21,19 @@ class Task extends CommonModel
 
     /**
      * 获取未完成与完成的任务数
+     * @param $memberCode
+     * @return array
      */
-    public function taskCount()
+    public function taskCount($memberCode)
     {
         $prefix = config('database.prefix');
         $sql = "select sum(case when done = 0 then 1 else 0 end) as unDoneCount, 
-                  sum(case when done = 1 then 1 else 0 end) as doneCount from ${prefix}task 
-                where deleted = 0";
+                  sum(case when done = 1 then 1 else 0 end) as doneCount from ${prefix}task t 
+                  inner join {$prefix}project p 
+                  on t.project_code = p.code 
+                  and t.deleted = 0
+                where t.deleted = 0
+                  and t.assign_to = '{$memberCode}'";
         $list = Db::query($sql);
         if ($list && 0 != count($list)) {
             return $list[0];
@@ -41,16 +47,21 @@ class Task extends CommonModel
 
     /**
      * 获取当天新增的任务数
+     * @param $memberCode
      * @return mixed
      */
-    public function todayTaskCount()
+    public function todayTaskCount($memberCode)
     {
         $nowDate = date('Y-m-d');
         $nowTime = nowTime();
         $prefix = config('database.prefix');
-        $sql = "select count(1) as c from ${prefix}task
-                where deleted = 0 
-                  and create_time between '${nowDate}' and '${nowTime}'";
+        $sql = "select count(1) as c from ${prefix}task t 
+                  inner join {$prefix}project p 
+                  on t.project_code = p.code 
+                  and p.deleted = 0
+                where t.deleted = 0 
+                  and t.assign_to = '{$memberCode}'
+                  and t.create_time between '${nowDate}' and '${nowTime}'";
         return Db::query($sql);
     }
 
@@ -59,15 +70,19 @@ class Task extends CommonModel
      *
      * @return int
      */
-    public function overdueCount()
+    public function overdueCount($memberCode)
     {
         $nowTime = nowTime();
 
         $prefix = config('database.prefix');
-        $sql = "select count(1) as c from ${prefix}task  
-                where deleted = 0  
-                  and done = 0 
-                  and end_time < '${nowTime}'";
+        $sql = "select count(1) as c from ${prefix}task t
+                  inner join {$prefix}project p 
+                  on p.code = t.project_code 
+                  and p.deleted = 0
+                where t.deleted = 0  
+                  and t.done = 0 
+                  and t.assign_to = '${memberCode}'
+                  and t.end_time < '${nowTime}'";
         $list = Db::query($sql);
         if ($list && 0 != count($list)) {
             return $list[0]['c'];
@@ -78,19 +93,25 @@ class Task extends CommonModel
 
     /**
      * 最近一月每天新增任务数
+     * @param $memberCode
+     * @return mixed
      */
-    public function newTaskCountPerDayLastMonth()
+    public function newTaskCountPerDayLastMonth($memberCode)
     {
         $startDate = date_create();
         date_sub($startDate, date_interval_create_from_date_string("31 days"));
         $startDateStr = date_format($startDate, "Y-m-d");
         $prefix = config('database.prefix');
-        $sql = "select month(create_time) as month, day(create_time) as day, count(1) as c 
+        $sql = "select month(t.create_time) as month, day(t.create_time) as day, count(1) as c 
                 from ${prefix}task t 
+                inner join {$prefix}project p 
+                on t.project_code = p.code 
+                and p.deleted = 0
                 where t.deleted = 0 
+                  and t.assign_to = '{$memberCode}'
                   and t.create_time >= '${startDateStr}'
-                group by month(create_time), day(create_time)
-                order by create_time";
+                group by month(t.create_time), day(t.create_time)
+                order by t.create_time";
         return Db::query($sql);
     }
 
@@ -98,13 +119,17 @@ class Task extends CommonModel
      * 按优先级统计任务数
      * @return mixed
      */
-    public function countByPriority()
+    public function countByPriority($memberCode)
     {
         $prefix = config('database.prefix');
-        $sql = "select case when pri = 0 then '普通' when pri = 1 then '紧急' else '非常紧急' end as priority, count(1) as c 
+        $sql = "select case when t.pri = 0 then '普通' when t.pri = 1 then '紧急' else '非常紧急' end as priority, count(1) as c 
                 from ${prefix}task t 
+                inner join {$prefix}project p 
+                on t.project_code = p.code 
+                and p.deleted = 0
                 where t.deleted = 0
-                group by case when pri = 0 then '普通' when pri = 1 then '紧急' else '非常紧急' end ";
+                and t.assign_to = '{$memberCode}'
+                group by case when t.pri = 0 then '普通' when t.pri = 1 then '紧急' else '非常紧急' end ";
         return Db::query($sql);
     }
 

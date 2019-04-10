@@ -68,18 +68,20 @@ class Task extends BasicApi
      */
     public function taskStatInfos()
     {
-        $taskStatList = $this->model->newTaskCountPerDayLastMonth();
-        $taskCount = $this->model->taskCount();
-        $todayTaskCountList = $this->model->todayTaskCount();
+        $memberCode = getCurrentMember()['code'];
+
+        $taskStatList = $this->model->newTaskCountPerDayLastMonth($memberCode);
+        $taskCount = $this->model->taskCount($memberCode);
+        $todayTaskCountList = $this->model->todayTaskCount($memberCode);
         $todayTaskCount = 0 == count($todayTaskCountList) ? 0 : $todayTaskCountList[0]['c'];
-        $countByPriority = $this->model->countByPriority();
+        $countByPriority = $this->model->countByPriority($memberCode);
 
         $result = [
            'taskStatList' => $taskStatList,
            'taskCount' => $taskCount['unDoneCount'],
             'doneCount' => $taskCount['doneCount'],
            'todayTaskCount' => $todayTaskCount,
-            'overdueCount' => $this->model->overdueCount(),
+            'overdueCount' => $this->model->overdueCount($memberCode),
             'countByPriority' => $countByPriority
         ];
 
@@ -114,14 +116,6 @@ class Task extends BasicApi
             }
         }
         $this->success('', $list);
-    }
-
-    /**
-     * 获取逾期任务数目
-     */
-    public function overdueCount()
-    {
-        $this->success('', $this->model->overdueCount());
     }
 
     public function taskSources()
